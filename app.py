@@ -12,10 +12,12 @@
 # Imports
 from tkinter import *
 from tkinter import filedialog
+from tkinter import simpledialog
 from collections import namedtuple
 from openpyxl import *
 import random
 import sys
+import copy
 
 try:
     import ttk
@@ -28,13 +30,19 @@ import main_support
 
 # Data containers
 VocabWord = namedtuple('VocabWord', ['character', 'pinyin', 'definition'])
-testWord = VocabWord(character='我', pinyin="wo", definition="I");
-vocab = [testWord]
+units = {}
+activeVocabList = []
 activeWord = 0
+
+testWord = VocabWord(character='我', pinyin="wo", definition="I");
+activeVocabList = [testWord]
+activeWord = testWord
+
+units["test"] = copy.deepcopy(activeVocabList)
 
 # Utility functions
 def unitFromXLSX(path):
-    global vocab
+    global units
     vocab = []
     testUnit = load_workbook(path, read_only=True)
     sheet = testUnit['Sheet1']
@@ -81,55 +89,62 @@ class Chinese:
         self.notecardButton.configure(text=activeWord.definition)
     
     def nextWord(self,event):
-        global activeWord
-        activeWord = random.choice(vocab)
+        global activeWord, activeVocabList
+        activeWord = random.choice(activeVocabList)
         print(activeWord)
         self.notecardButton.configure(text=activeWord.character)
         
-    def onMainButtonStartupClick(self):
-        global vocab, activeWord
+    def promptNewUnit(self):
+        global activeVocabList, activeWord
+        unitName = simpledialog.askstring("New Unit!", "What's the name of the new unit?")
         root.withdraw()
         path = filedialog.askopenfilename()
         root.deiconify()
         
-        vocab = unitFromXLSX(path)
-        activeWord = vocab[0]
+        newVocabList = unitFromXLSX(path)
+        units[unitName] = newVocabList
+        activeVocabList = newVocabList
+        activeWord = newVocabList[0]
+
+        self.unitList.insert(END, unitName)
         self.notecardButton.configure(text=activeWord.character)
         self.notecardButton.configure(command=self.showDef)
     
 
     def __init__(self, top=None):
+        # Init all static things (positions, colors) handled by PAGE
         _bgcolor = '#d9d9d9'  # X11 color: 'gray85'
         _fgcolor = '#000000'  # X11 color: 'black'
         _compcolor = '#d9d9d9' # X11 color: 'gray85'
         _ana1color = '#d9d9d9' # X11 color: 'gray85' 
         _ana2color = '#d9d9d9' # X11 color: 'gray85' 
+        font10 = "-family {Segoe UI} -size 24 -weight normal -slant "  \
+            "roman -underline 0 -overstrike 0"
 
         top.geometry("901x450+511+97")
         top.title("Chinese")
         top.configure(background="#d9d9d9")
         top.configure(highlightbackground="#d9d9d9")
         top.configure(highlightcolor="black")
-        top.bind("n", self.nextWord)
-        top.bind("p", self.showPinyin)
-        top.bind("d", self.showDef)
+
+
 
         self.notecardButton = Button(top)
-        self.notecardButton.place(relx=0.57, rely=0.36, height=73, width=146)
+        self.notecardButton.place(relx=0.52, rely=0.24, height=203, width=266)
         self.notecardButton.configure(activebackground="#d9d9d9")
         self.notecardButton.configure(activeforeground="#000000")
         self.notecardButton.configure(background="#d9d9d9")
         self.notecardButton.configure(disabledforeground="#a3a3a3")
+        self.notecardButton.configure(font=font10)
         self.notecardButton.configure(foreground="#000000")
         self.notecardButton.configure(highlightbackground="#d9d9d9")
         self.notecardButton.configure(highlightcolor="black")
         self.notecardButton.configure(pady="0")
         self.notecardButton.configure(text='''Button''')
-        self.notecardButton.configure(width=146)
-        self.notecardButton.configure(command=self.onMainButtonStartupClick)
- 
+        self.notecardButton.configure(width=266)
+
         self.unitList = Listbox(top)
-        self.unitList.place(relx=0.01, rely=0.11, relheight=0.8, relwidth=0.33)
+        self.unitList.place(relx=0.01, rely=0.11, relheight=0.73, relwidth=0.33)
         self.unitList.configure(background="white")
         self.unitList.configure(disabledforeground="#a3a3a3")
         self.unitList.configure(font="TkFixedFont")
@@ -143,6 +158,25 @@ class Chinese:
         self.unitSelect.configure(foreground="#000000")
         self.unitSelect.configure(text='''Select Unit''')
         self.unitSelect.configure(width=102)
+
+        self.newUnit = Button(top)
+        self.newUnit.place(relx=0.01, rely=0.89, height=33, width=296)
+        self.newUnit.configure(activebackground="#d9d9d9")
+        self.newUnit.configure(activeforeground="#000000")
+        self.newUnit.configure(background="#d9d9d9")
+        self.newUnit.configure(disabledforeground="#a3a3a3")
+        self.newUnit.configure(foreground="#000000")
+        self.newUnit.configure(highlightbackground="#d9d9d9")
+        self.newUnit.configure(highlightcolor="black")
+        self.newUnit.configure(pady="0")
+        self.newUnit.configure(text='''Add New Unit''')
+        self.newUnit.configure(width=296)
+        
+        # Init all programmatic things
+        top.bind("n", self.nextWord)
+        top.bind("p", self.showPinyin)
+        top.bind("d", self.showDef)
+        self.newUnit.configure(command=self.promptNewUnit)
 
 if __name__ == '__main__':
     vp_start_gui()
