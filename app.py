@@ -29,16 +29,42 @@ except ImportError:
 import main_support
 
 # Data containers
-VocabWord = namedtuple('VocabWord', ['character', 'pinyin', 'definition'])
+"""
+struct VocabWord {
+  string character;
+  string pinyin;
+  string definition;
+  int accessed;
+  int correct;
+};
+
+unordered_map<string, vector<VocabWord>> units;
+
+"""
+class Struct:
+  def __init__(self, **kwargs):
+    for k, v in kwargs.items():
+      setattr(self, k, v)
+
+class VocabWord(Struct):
+    def __str__(self):
+        if (self.accessed == 0):
+            ratio = 0
+        else:
+            ratio = float(self.correct) / self.accessed
+                
+        return('character = ' + self.character + ","
+               + 'pinyin = ' + self.pinyin + ","
+               + 'definition = ' + self.definition + ","
+               + 'ratio = ' + str(ratio))
+
 units = {}
-activeVocabList = []
-activeWord = 0
 
-testWord = VocabWord(character='我', pinyin="wo", definition="I");
-activeVocabList = [testWord]
+testWord = VocabWord(character='我', pinyin="wo", definition="I", accessed=0, correct=0);
+testUnit = [testWord]
 activeWord = testWord
-
-units["test"] = copy.deepcopy(activeVocabList)
+activeUnit = testUnit
+units["test"] = activeUnit
 
 # Utility functions
 def unitFromXLSX(path):
@@ -49,7 +75,9 @@ def unitFromXLSX(path):
     for row in sheet:
         newWord = VocabWord(character=row[0].value,
                             pinyin=row[1].value,
-                            definition=row[2].value)
+                            definition=row[2].value,
+                            accessed=0,
+                            correct=0)
         vocab.append(newWord)
         
     return vocab
@@ -83,19 +111,34 @@ def destroy_Chinese():
 class Chinese:
     # Flash card functions
     def showPinyin(self, event):
-        self.notecardButton.configure(text=activeWord.pinyin)
+        self.vocabWordLabel.configure(text=activeWord.pinyin)
     
     def showDef(self, event):
-        self.notecardButton.configure(text=activeWord.definition)
+        self.vocabWordLabel.configure(text=activeWord.definition)
+
+    def showChar(self, event):
+        self.vocabWordLabel.configure(text=activeWord.character)
     
     def nextWord(self,event):
-        global activeWord, activeVocabList
-        activeWord = random.choice(activeVocabList)
+        global activeWord, activeUnit
         print(activeWord)
-        self.notecardButton.configure(text=activeWord.character)
+        activeWord = random.choice(activeUnit)
+
+        # Change word color based on how correct it is
+        if (activeWord.accessed == 0):
+            wordColorHexStr = '#000000'
+        else:
+            rateCorrect = float(activeWord.correct) / activeWord.accessed
+            rateIncorrect = 1 - rateCorrect
+            wordColorHexStr = '#%02x%02x%02x' % (int(rateIncorrect * 255), # red
+                                                 int(rateCorrect * 255),   # green
+                                                 0)                        # blue
+            
+        self.vocabWordLabel.configure(foreground=wordColorHexStr)
+        self.vocabWordLabel.configure(text=activeWord.character)
         
     def promptNewUnit(self):
-        global activeVocabList, activeWord
+        global activeUnit, activeWord
         unitName = simpledialog.askstring("New Unit!", "What's the name of the new unit?")
         root.withdraw()
         path = filedialog.askopenfilename()
@@ -103,14 +146,22 @@ class Chinese:
         
         newVocabList = unitFromXLSX(path)
         units[unitName] = newVocabList
-        activeVocabList = newVocabList
+        activeUnit = newVocabList
         activeWord = newVocabList[0]
 
         self.unitList.insert(END, unitName)
-        self.notecardButton.configure(text=activeWord.character)
-        self.notecardButton.configure(command=self.showDef)
-    
+        self.vocabWordLabel.configure(text=activeWord.character)
 
+    def markIncorrect(self, event):
+        global activeWord
+        activeWord.accessed += 1
+        self.nextWord(event)
+        
+    def markCorrect(self, event):
+        activeWord.accessed += 1
+        activeWord.correct += 1
+        self.nextWord(event)
+     
     def __init__(self, top=None):
         # Init all static things (positions, colors) handled by PAGE
         _bgcolor = '#d9d9d9'  # X11 color: 'gray85'
@@ -118,7 +169,7 @@ class Chinese:
         _compcolor = '#d9d9d9' # X11 color: 'gray85'
         _ana1color = '#d9d9d9' # X11 color: 'gray85' 
         _ana2color = '#d9d9d9' # X11 color: 'gray85' 
-        font10 = "-family {Segoe UI} -size 24 -weight normal -slant "  \
+        font10 = "-family {Segoe UI} -size 42 -weight normal -slant "  \
             "roman -underline 0 -overstrike 0"
 
         top.geometry("901x450+511+97")
@@ -126,23 +177,7 @@ class Chinese:
         top.configure(background="#d9d9d9")
         top.configure(highlightbackground="#d9d9d9")
         top.configure(highlightcolor="black")
-
-
-
-        self.notecardButton = Button(top)
-        self.notecardButton.place(relx=0.52, rely=0.24, height=203, width=266)
-        self.notecardButton.configure(activebackground="#d9d9d9")
-        self.notecardButton.configure(activeforeground="#000000")
-        self.notecardButton.configure(background="#d9d9d9")
-        self.notecardButton.configure(disabledforeground="#a3a3a3")
-        self.notecardButton.configure(font=font10)
-        self.notecardButton.configure(foreground="#000000")
-        self.notecardButton.configure(highlightbackground="#d9d9d9")
-        self.notecardButton.configure(highlightcolor="black")
-        self.notecardButton.configure(pady="0")
-        self.notecardButton.configure(text='''Button''')
-        self.notecardButton.configure(width=266)
-
+ 
         self.unitList = Listbox(top)
         self.unitList.place(relx=0.01, rely=0.11, relheight=0.73, relwidth=0.33)
         self.unitList.configure(background="white")
@@ -172,10 +207,27 @@ class Chinese:
         self.newUnit.configure(text='''Add New Unit''')
         self.newUnit.configure(width=296)
         
+        self.vocabWordLabel = Label(top)
+        self.vocabWordLabel.place(relx=0.46, rely=0.33, height=116, width=352)
+        self.vocabWordLabel.configure(activebackground="#000080")
+        self.vocabWordLabel.configure(activeforeground="white")
+        self.vocabWordLabel.configure(activeforeground="#000000")
+        self.vocabWordLabel.configure(background="#d9d9d9")
+        self.vocabWordLabel.configure(disabledforeground="#a3a3a3")
+        self.vocabWordLabel.configure(font=font10)
+        self.vocabWordLabel.configure(foreground="#000000")
+        self.vocabWordLabel.configure(highlightbackground="#d9d9d9")
+        self.vocabWordLabel.configure(highlightcolor="black")
+        self.vocabWordLabel.configure(text='''Vocab word!''')
+
+
         # Init all programmatic things
         top.bind("n", self.nextWord)
         top.bind("p", self.showPinyin)
         top.bind("d", self.showDef)
+        top.bind("c", self.showChar)
+        top.bind("<space>", self.markCorrect)
+        top.bind("<Return>", self.markIncorrect)
         self.newUnit.configure(command=self.promptNewUnit)
 
 if __name__ == '__main__':

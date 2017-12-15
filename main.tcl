@@ -18,7 +18,7 @@ set vTcl(active_menu_fg) #000000
 # vTcl Code to Load User Fonts
 
 vTcl:font:add_font \
-    "-family {Segoe UI} -size 24 -weight normal -slant roman -underline 0 -overstrike 0" \
+    "-family Georgia -size 24 -weight normal -slant roman -underline 0 -overstrike 0" \
     user \
     vTcl:font10
 #################################
@@ -82,36 +82,39 @@ proc vTclWindow.top37 {base} {
     wm deiconify $top
     wm title $top "Chinese"
     vTcl:DefineAlias "$top" "mainscreen" vTcl:Toplevel:WidgetProc "" 1
-    button $top.but37 \
-        -activebackground {#d9d9d9} -activeforeground {#000000} \
-        -background {#d9d9d9} -disabledforeground {#a3a3a3} \
-        -font $::vTcl(fonts,vTcl:font10,object) -foreground {#000000} \
-        -highlightbackground {#d9d9d9} -highlightcolor black -pady 0 \
-        -text Button 
-    vTcl:DefineAlias "$top.but37" "notecardButton" vTcl:WidgetProc "mainscreen" 1
+    ttk::style configure Listbox -background #d9d9d9
+    ttk::style configure Listbox -foreground #000000
+    ttk::style configure Listbox -font TkDefaultFont
     listbox $top.lis38 \
         -background white -disabledforeground {#a3a3a3} -font TkFixedFont \
-        -foreground {#000000} -height 328 -width 294 
+        -foreground {#000000} -height 328 -highlightbackground {#d9d9d9} \
+        -highlightcolor black -selectbackground {#c4c4c4} \
+        -selectforeground black -width 294 
     .top37.lis38 configure -font TkFixedFont
     .top37.lis38 insert end text
     vTcl:DefineAlias "$top.lis38" "unitList" vTcl:WidgetProc "mainscreen" 1
     label $top.lab39 \
+        -activebackground {#f9f9f9} -activeforeground black \
         -background {#d9d9d9} -disabledforeground {#a3a3a3} \
-        -foreground {#000000} -text {Select Unit} 
+        -foreground {#000000} -highlightbackground {#d9d9d9} \
+        -highlightcolor black -text {Select Unit} 
     vTcl:DefineAlias "$top.lab39" "unitSelect" vTcl:WidgetProc "mainscreen" 1
     button $top.but40 \
         -activebackground {#d9d9d9} -activeforeground {#000000} \
-        -background {#d9d9d9} -command addNewUnit \
-        -disabledforeground {#a3a3a3} -foreground {#000000} \
-        -highlightbackground {#d9d9d9} -highlightcolor black -pady 0 \
-        -text {Add New Unit} 
+        -background {#d9d9d9} -disabledforeground {#a3a3a3} \
+        -foreground {#000000} -highlightbackground {#d9d9d9} \
+        -highlightcolor black -pady 0 -text {Add New Unit} 
     vTcl:DefineAlias "$top.but40" "newUnit" vTcl:WidgetProc "mainscreen" 1
+    label $top.lab41 \
+        -activebackground {#000080} -activeforeground {#000000} \
+        -background {#d9d9d9} -disabledforeground {#a3a3a3} \
+        -font $::vTcl(fonts,vTcl:font10,object) -foreground {#000000} \
+        -highlightbackground {#d9d9d9} -highlightcolor black \
+        -text {Vocab word!} 
+    vTcl:DefineAlias "$top.lab41" "vocabWordLabel" vTcl:WidgetProc "mainscreen" 1
     ###################
     # SETTING GEOMETRY
     ###################
-    place $top.but37 \
-        -in $top -x 470 -y 110 -width 266 -relwidth 0 -height 203 \
-        -relheight 0 -anchor nw -bordermode ignore 
     place $top.lis38 \
         -in $top -x 10 -y 50 -width 294 -relwidth 0 -height 328 -relheight 0 \
         -anchor nw -bordermode ignore 
@@ -121,6 +124,9 @@ proc vTclWindow.top37 {base} {
     place $top.but40 \
         -in $top -x 10 -y 400 -width 296 -relwidth 0 -height 33 -relheight 0 \
         -anchor nw -bordermode ignore 
+    place $top.lab41 \
+        -in $top -x 410 -y 150 -width 352 -relwidth 0 -height 116 \
+        -relheight 0 -anchor nw -bordermode ignore 
 
     vTcl:FireEvent $base <<Ready>>
 }
