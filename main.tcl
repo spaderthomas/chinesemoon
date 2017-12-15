@@ -18,9 +18,13 @@ set vTcl(active_menu_fg) #000000
 # vTcl Code to Load User Fonts
 
 vTcl:font:add_font \
-    "-family Georgia -size 24 -weight normal -slant roman -underline 0 -overstrike 0" \
+    "-family Georgia -size 12 -weight normal -slant roman -underline 0 -overstrike 0" \
     user \
-    vTcl:font10
+    vTcl:font12
+vTcl:font:add_font \
+    "-family Georgia -size 9 -weight normal -slant roman -underline 0 -overstrike 0" \
+    user \
+    vTcl:font14
 #################################
 #LIBRARY PROCEDURES
 #
@@ -82,9 +86,6 @@ proc vTclWindow.top37 {base} {
     wm deiconify $top
     wm title $top "Chinese"
     vTcl:DefineAlias "$top" "mainscreen" vTcl:Toplevel:WidgetProc "" 1
-    ttk::style configure Listbox -background #d9d9d9
-    ttk::style configure Listbox -foreground #000000
-    ttk::style configure Listbox -font TkDefaultFont
     listbox $top.lis38 \
         -background white -disabledforeground {#a3a3a3} -font TkFixedFont \
         -foreground {#000000} -height 328 -highlightbackground {#d9d9d9} \
@@ -96,22 +97,45 @@ proc vTclWindow.top37 {base} {
     label $top.lab39 \
         -activebackground {#f9f9f9} -activeforeground black \
         -background {#d9d9d9} -disabledforeground {#a3a3a3} \
-        -foreground {#000000} -highlightbackground {#d9d9d9} \
-        -highlightcolor black -text {Select Unit} 
+        -font $::vTcl(fonts,vTcl:font12,object) -foreground {#000000} \
+        -highlightbackground {#d9d9d9} -highlightcolor black \
+        -text {Select Unit} 
     vTcl:DefineAlias "$top.lab39" "unitSelect" vTcl:WidgetProc "mainscreen" 1
     button $top.but40 \
         -activebackground {#d9d9d9} -activeforeground {#000000} \
-        -background {#d9d9d9} -disabledforeground {#a3a3a3} \
-        -foreground {#000000} -highlightbackground {#d9d9d9} \
-        -highlightcolor black -pady 0 -text {Add New Unit} 
+        -background {#d9d9d9} -borderwidth 3 -disabledforeground {#a3a3a3} \
+        -font $::vTcl(fonts,vTcl:font12,object) -foreground {#000000} \
+        -highlightbackground {#d9d9d9} -highlightcolor black -pady 0 \
+        -text {Add New Unit} 
     vTcl:DefineAlias "$top.but40" "newUnit" vTcl:WidgetProc "mainscreen" 1
     label $top.lab41 \
         -activebackground {#000080} -activeforeground {#000000} \
         -background {#d9d9d9} -disabledforeground {#a3a3a3} \
-        -font $::vTcl(fonts,vTcl:font10,object) -foreground {#000000} \
+        -font $::vTcl(fonts,vTcl:font12,object) -foreground {#000000} \
         -highlightbackground {#d9d9d9} -highlightcolor black \
-        -text {Vocab word!} 
+        -text {Select a unit to start} 
     vTcl:DefineAlias "$top.lab41" "vocabWordLabel" vTcl:WidgetProc "mainscreen" 1
+    button $top.but37 \
+        -activebackground {#d9d9d9} -activeforeground {#000000} \
+        -background {#d9d9d9} -borderwidth 3 -disabledforeground {#a3a3a3} \
+        -font $::vTcl(fonts,vTcl:font14,object) -foreground {#000000} \
+        -highlightbackground {#d9d9d9} -highlightcolor black -padx 0 -pady 0 \
+        -text {Toggle Hard Mode!} 
+    vTcl:DefineAlias "$top.but37" "toggleHardButton" vTcl:WidgetProc "mainscreen" 1
+    button $top.cpd38 \
+        -activebackground {#d9d9d9} -activeforeground {#000000} \
+        -background {#d9d9d9} -borderwidth 3 -disabledforeground {#a3a3a3} \
+        -font $::vTcl(fonts,vTcl:font14,object) -foreground {#000000} \
+        -highlightbackground {#d9d9d9} -highlightcolor black -padx 0 -pady 0 \
+        -text {Pinyin Mode!} 
+    vTcl:DefineAlias "$top.cpd38" "pinyinModeButton" vTcl:WidgetProc "mainscreen" 1
+    button $top.cpd39 \
+        -activebackground {#d9d9d9} -activeforeground {#000000} \
+        -background {#d9d9d9} -borderwidth 3 -disabledforeground {#a3a3a3} \
+        -font $::vTcl(fonts,vTcl:font14,object) -foreground {#000000} \
+        -highlightbackground {#d9d9d9} -highlightcolor black -padx 0 -pady 0 \
+        -text {Definition Mode!} 
+    vTcl:DefineAlias "$top.cpd39" "defModeButton" vTcl:WidgetProc "mainscreen" 1
     ###################
     # SETTING GEOMETRY
     ###################
@@ -122,11 +146,20 @@ proc vTclWindow.top37 {base} {
         -in $top -x 100 -y 10 -width 102 -relwidth 0 -height 26 -relheight 0 \
         -anchor nw -bordermode ignore 
     place $top.but40 \
-        -in $top -x 10 -y 400 -width 296 -relwidth 0 -height 33 -relheight 0 \
+        -in $top -x 10 -y 390 -width 296 -relwidth 0 -height 43 -relheight 0 \
         -anchor nw -bordermode ignore 
     place $top.lab41 \
         -in $top -x 410 -y 150 -width 352 -relwidth 0 -height 116 \
         -relheight 0 -anchor nw -bordermode ignore 
+    place $top.but37 \
+        -in $top -x 350 -y 390 -width 155 -relwidth 0 -height 43 -relheight 0 \
+        -anchor nw -bordermode ignore 
+    place $top.cpd38 \
+        -in $top -x 530 -y 390 -width 155 -height 43 -anchor nw \
+        -bordermode inside 
+    place $top.cpd39 \
+        -in $top -x 710 -y 390 -width 175 -relwidth 0 -height 43 -relheight 0 \
+        -anchor nw -bordermode inside 
 
     vTcl:FireEvent $base <<Ready>>
 }
