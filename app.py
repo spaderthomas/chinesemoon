@@ -184,6 +184,9 @@ class Chinese:
             activeUnit = units[name]
             activeWord = activeUnit[0]
             self.nextWord()
+
+    def changeUnit(self, name):
+        self.makeUnitActive(self.unitList.get(ACTIVE))
             
     def promptNewUnit(self):
         global units, activeUnit, activeWord
@@ -194,8 +197,7 @@ class Chinese:
 
         newVocabList = self.unitFromXLSX(path)
         units[unitName] = newVocabList
-        activeUnit = newVocabList
-        activeWord = newVocabList[0]
+        self.makeUnitActive(unitName)
 
         self.unitList.insert(END, unitName)
         self.vocabWordLabel.configure(text=activeWord.character)
@@ -387,23 +389,22 @@ class Chinese:
         self.toggleHardButton.configure(variable=hardMode)
         
         # Init all programmatic things
-        top.bind("n", self.nextWord)
-        top.bind("p", self.showPinyin)
-        top.bind("d", self.showDef)
-        top.bind("c", self.showChar)
-        top.bind("<Return>", self.markCorrect)
-        top.bind("<Shift_R>", self.markIncorrect)
-        top.bind("<space>", self.cycleDisplay)
+        top.bind('n', self.nextWord)
+        top.bind('p', self.showPinyin)
+        top.bind('d', self.showDef)
+        top.bind('c', self.showChar)
+        top.bind('<Return>', self.markCorrect)
+        top.bind('<Shift_R>', self.markIncorrect)
+        top.bind('<space>', self.cycleDisplay)
         
         self.newUnit.configure(command=self.promptNewUnit)
         self.charModeButton.configure(command=self.activateCharMode)
         self.pinyinModeButton.configure(command=self.activatePinyinMode)
         self.defModeButton.configure(command=self.activateDefMode)
+        self.unitList.bind('<Double-Button-1>', self.changeUnit)
+        self.activateCharMode() # Default show characters first
 
-        # Default show characters first
-        self.activateCharMode()
-
-        root.protocol("WM_DELETE_WINDOW", self.onClose)
+        root.protocol('WM_DELETE_WINDOW', self.onClose)
 
         try:
             state = self.deserialize()
