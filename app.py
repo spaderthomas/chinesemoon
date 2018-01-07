@@ -1,16 +1,16 @@
 # Features:
 # - combine units (temporarily)
-# - show the stats
-# - word wrap
-# - random malware popups
-# - reset stats
 
+# To-do
+# - make all positions relative
+# - Clear unit when deleting last one
 # Imports
 from tkinter import *
 from tkinter import filedialog
 from tkinter import simpledialog
 from tkinter import messagebox
 from tkinter import IntVar
+from math import floor
 
 try:
     import ttk
@@ -49,31 +49,36 @@ def destroy_GUI():
 
 
 hardMode = False
-
-
+percentMode = False
 class GUI:
     # Flash card functions
     def showPinyin(self, word, event=None):
         if (word):
             self.vocabWordLabel.configure(text=word.pinyin)
-            vocabFont = "-family Georgia -size 32 -weight normal -slant roman "  \
-            "-underline 0 -overstrike 0"
-            self.vocabWordLabel.configure(font=vocabFont)
+            self.vocabWordLabel.configure(font=self.pinyinFont)
     
     def showDef(self, word, event=None):
         if (word):
             self.vocabWordLabel.configure(text=word.definition)
-            vocabFont = "-family Georgia -size 24 -weight normal -slant roman "  \
-            "-underline 0 -overstrike 0"
-            self.vocabWordLabel.configure(font=vocabFont)
+            self.vocabWordLabel.configure(font=self.englishFont)
 
     def showChar(self, word, event=None):
         if (word):
             self.vocabWordLabel.configure(text=word.character)
-            vocabFont = "-family Georgia -size 48 -weight normal -slant roman "  \
-            "-underline 0 -overstrike 0"
-            self.vocabWordLabel.configure(font=vocabFont)
+            self.vocabWordLabel.configure(font=self.pinyinFont)
 
+    def onPressC(self, event):
+        word = getActiveWord()
+        self.showChar(word)
+
+    def onPressD(self, event):
+        word = getActiveWord()
+        self.showDef(word)
+
+    def onPressP(self, event):
+        word = getActiveWord()
+        self.showPinyin(word)
+            
     def show(self, word, color, mode):
         self.vocabWordLabel.configure(foreground=color)
         
@@ -87,17 +92,29 @@ class GUI:
 
     def cycleDisplay(self, event=None):
         mode = getActiveDisplayMode()
+        word = getActiveWord()
         if (mode == 'character'):
-            setDisplayMode('pinyin')
-            self.showPinyin()
+            self.showPinyin(word)
         elif (mode == 'pinyin'):
-            setDisplayMode('definition')
-            self.showDef()
+            self.showDef(word)
         elif (mode == 'definition'):
-            setDisplayMode('character')
-            self.showChar()
+            self.showChar(word)
         return 'break' 
 
+    def updateRatio(self, word):
+        global percentMode
+        if (percentMode):
+            if (word.accessed == 0):
+                ratioStr = "0%"
+            else:
+                ratio = float(word.correct) / float(word.accessed) * 100
+                ratioStr = str(floor(ratio))
+                ratioStr += "%"
+        else:
+            ratioStr = str(word.correct) + "/" + str(word.accessed)
+            
+        self.ratioLabel.configure(text=ratioStr)
+            
     def nextWord(self, event=None):
         countWordsTooEasy = 0
         newWord = False
@@ -112,9 +129,10 @@ class GUI:
             else:
                 rateCorrect = float(newWord.correct) / newWord.accessed
                 rateIncorrect = 1 - rateCorrect
-                wordColorHexStr = '#%02x%02x%02x' % (int(rateIncorrect * 255), # red
-                                                     int(rateCorrect * 255),   # green
-                                                     100)                      # blue
+                red = int(rateIncorrect * 200)       #255 is too bright
+                green = int(rateCorrect * 200)
+                blue = int(0)
+                wordColorHexStr = '#%02x%02x%02x' % (red, green, blue)
                 
             # Reject words we get right too often
             if (hardMode.get()):
@@ -125,13 +143,14 @@ class GUI:
             else:
                 break
             
-            if (countWordsTooEasy > 1000):
+            if (countWordsTooEasy > 1000): #the worst algorithm
                 messagebox.showinfo("Get it girl!", "It looks like this unit is too easy for you -- we couldn't find a word with less than 2/3 correct rate!")
                 root.mainloop()
                 
         setActiveWord(newWord)
         mode = getActiveDisplayMode()
         self.show(newWord, wordColorHexStr, mode)
+        self.updateRatio(newWord)
 
 
                 
@@ -154,6 +173,7 @@ class GUI:
 
     def changeUnitOnDoubleClick(self, event):
         makeUnitActive(self.unitList.get(ACTIVE))
+        self.nextWord()
         
     def promptNewUnit(self):
         unitName = simpledialog.askstring("New Unit!", "What's the name of the new unit?")
@@ -171,26 +191,32 @@ class GUI:
         self.nextWord()
 
     # Note: Unit to be deleted should be bound as active    
-    def deleteUnit(self, index):
+    def deleteActiveUnit(self):
         name = self.unitList.get(ACTIVE)
         delUnit(name)
         
         self.unitList.delete(ACTIVE)
         makeUnitActive()
-        self.nextWord()
+
+        activeUnit = getActiveUnit()
+        if (activeUnit):
+            self.nextWord()
+        else:
+            self.vocabWordLabel.configure(font=self.englishFont)
+            self.vocabWordLabel.configure(text="Add a unit!")
 
         
 
     ## Mode changing
-    def activateDefMode(self):
+    def activateDefMode(self, event=None):
         setDisplayMode('definition')
         self.pinyinModeButton.configure(relief=RAISED)
         self.charModeButton.configure(relief=RAISED)
         self.defModeButton.configure(relief=SUNKEN)
         word = getActiveWord()
         self.showDef(word)
-    
-    def activatePinyinMode(self):
+
+    def activatePinyinMode(self, event=None):
         setDisplayMode('pinyin')
         self.defModeButton.configure(relief=RAISED)
         self.charModeButton.configure(relief=RAISED)
@@ -198,7 +224,7 @@ class GUI:
         word = getActiveWord()
         self.showPinyin(word)
 
-    def activateCharMode(self):
+    def activateCharMode(self, event=None):
         setDisplayMode('character')
         self.pinyinModeButton.configure(relief=RAISED)
         self.defModeButton.configure(relief=RAISED)
@@ -219,24 +245,51 @@ class GUI:
         markIncorrect(activeWord)
         self.nextWord()
 
+    def onClickResetButton(self):
+        resetActiveWordStats()
+        activeWord = getActiveWord()
+        mode = getActiveDisplayMode()
+        self.show(activeWord, '#000000', mode)
+        
+    def onClickRatioLabel(self, event):
+        global percentMode
+        percentMode = True
+        activeWord = getActiveWord()
+        self.updateRatio(activeWord)
+
+    def serialize(self):
+        global hardMode, percentMode
+        state = {'hardMode' : hardMode.get(),
+                 'percentMode' : percentMode}
+        pickle.dump(state, open("gui.cm", "wb"))
+
+    def deserialize(self):
+        return pickle.load(open("gui.cm", "rb"))
+
     def onClose(self):
+        self.serialize()
         serialize()
         root.destroy()
 
         
     # Initialization    
     def __init__(self, top=None):
-        global hardMode, units, firstUse
+        global hardMode, units, percentMode
         
         # Init all static things (positions, colors) handled by PAGE
         font10 = "-family Georgia -size 9 -weight normal -slant roman "  \
             "-underline 0 -overstrike 0"
         font9 = "-family Georgia -size 12 -weight normal -slant roman "  \
             "-underline 0 -overstrike 0"
-        vocabFont = "-family Georgia -size 48 -weight normal -slant roman "  \
+        self.charFont = "-family Georgia -size 48 -weight normal -slant roman "  \
             "-underline 0 -overstrike 0"
-        vocabCharFont = "-family Georgia -size 24 -weight normal -slant roman "  \
+        self.englishFont = "-family Georgia -size 24 -weight normal -slant roman "  \
             "-underline 0 -overstrike 0"
+        self.pinyinFont = "-family Georgia -size 32 -weight normal -slant roman "  \
+            "-underline 0 -overstrike 0"
+        self.smallEnglishFont = "-family Georgia -size 12 -weight normal -slant roman " \
+            "-underline 0 -overstrike 0"
+        
         _bgcolor = '#d9d9d9'  # X11 color: 'gray85'
         _fgcolor = '#000000'  # X11 color: 'black'
         _compcolor = '#d9d9d9' # X11 color: 'gray85'
@@ -264,9 +317,9 @@ class GUI:
 
         self.unitMenu = Menu(self.unitList, tearoff=0)
         self.unitMenu.add_command(label="Delete",
-                                    command=self.deleteUnit)
+                                    command=self.deleteActiveUnit)
         self.unitMenu.add_command(label="Select All",
-                                    command=self.deleteUnit)
+                                    command=self.deleteActiveUnit)
 
         self.unitSelect = Label(top)
         self.unitSelect.place(relx=0.11, rely=0.02, height=26, width=102)
@@ -295,18 +348,18 @@ class GUI:
         self.newUnit.configure(text='''Add New Unit''')
 
         self.vocabWordLabel = Label(top)
-        self.vocabWordLabel.place(relx=0.46, rely=0.33, height=116, width=352)
+        self.vocabWordLabel.place(relx=0.37, rely=0.13, height=286, width=432)
+        #self.vocabWordLabel.place(relx=0.375, rely=0.11, relheight=.45, relwidth=.5)
         self.vocabWordLabel.configure(activebackground="#000080")
         self.vocabWordLabel.configure(activeforeground="white")
         self.vocabWordLabel.configure(activeforeground="#000000")
         self.vocabWordLabel.configure(background="#d9d9d9")
         self.vocabWordLabel.configure(disabledforeground="#a3a3a3")
-        self.vocabWordLabel.configure(font=vocabFont)
+        self.vocabWordLabel.configure(font=self.englishFont)
         self.vocabWordLabel.configure(foreground="#000000")
         self.vocabWordLabel.configure(highlightbackground="#d9d9d9")
         self.vocabWordLabel.configure(highlightcolor="black")
-        #self.vocabWordLabel.configure(wrap=WORD)
- 
+        self.vocabWordLabel.configure(wraplength=450)
 
         self.pinyinModeButton = Button(top)
         self.pinyinModeButton.place(relx=0.59, rely=0.87, height=43, width=155)
@@ -369,11 +422,31 @@ class GUI:
         self.toggleHardButton.configure(text='''Hard Mode''')
         self.toggleHardButton.configure(variable=hardMode)
         
+        self.resetButton = Button(top)
+        self.resetButton.place(relx=0.88, rely=0.10, relheight=0.08, relwidth=0.11)
+        self.resetButton.configure(activebackground="#d9d9d9")
+        self.resetButton.configure(activeforeground="#000000")
+        self.resetButton.configure(background="#d9d9d9")
+        self.resetButton.configure(disabledforeground="#a3a3a3")
+        self.resetButton.configure(foreground="#000000")
+        self.resetButton.configure(highlightbackground="#d9d9d9")
+        self.resetButton.configure(highlightcolor="black")
+        self.resetButton.configure(pady="0")
+        self.resetButton.configure(text='''Reset Word''')
+        self.resetButton.configure(width=106)
+
+        self.ratioLabel = Label(top)
+        self.ratioLabel.place(relx=0.89, rely=0.22, height=26, width=82)
+        self.ratioLabel.configure(background="#d9d9d9")
+        self.ratioLabel.configure(disabledforeground="#a3a3a3")
+        self.ratioLabel.configure(foreground="#000000")
+        self.ratioLabel.configure(font=self.smallEnglishFont)
+
         # Init all programmatic things
         top.bind('n', self.nextWord)
-        top.bind('p', self.showPinyin)
-        top.bind('d', self.showDef)
-        top.bind('c', self.showChar)
+        top.bind('p', self.onPressP)
+        top.bind('d', self.onPressD)
+        top.bind('c', self.onPressC)
         top.bind('<Return>', self.correct)
         top.bind('<Shift_R>', self.incorrect)
         top.bind('<space>', self.cycleDisplay)
@@ -385,9 +458,11 @@ class GUI:
         self.unitList.bind('<Double-Button-1>', self.changeUnitOnDoubleClick)
         self.unitList.bind('<Button-3>', self.selectUnitOnRightClick)
         self.unitList.bind('<ButtonRelease-3>', self.showUnitMenu)
+        self.resetButton.configure(command=self.onClickResetButton)
+        self.ratioLabel.bind('<Button-1>', self.onClickRatioLabel)
         
         self.activateCharMode() # Default show characters first
-
+        
         root.protocol('WM_DELETE_WINDOW', self.onClose)
 
         # Load in data. If we can't find it, display welcome message
@@ -399,6 +474,13 @@ class GUI:
                 
             makeUnitActive()
             self.nextWord()
+
+            guiState = self.deserialize()
+            hardMode.set(guiState['hardMode'])
+            percentMode = guiState['percentMode']
+
+            activeWord = getActiveWord()
+            self.updateRatio(activeWord)
         except:
             messagebox.showinfo("!", "Welcome to chinesemoon! A handmade flash card program, just for you!. How to use:\n 1. Load a unit from an excel spreadsheet. Make sure you just have the characters in column 1, pinyin in column 2, and definition in column 3.\n2. Add the spreadsheet as a unit.\n\nGreat! Now you have a unit of vocabulary to study! Press <space> to toggle between character, definition, and pinyin. Press 'p', 'd', or 'c' to flip directly to pinyin, definition, or character. When studying, press enter to mark a word as correct and press right shift to mark it incorrect. If you want to study without affecting your score, use 'n' to go to the next word.\n\n Words will show up on a spectrum of green to red, indicating what percentage of the time you get them correct. Check hard mode to only display words you get wrong more than 1/3 of the time!")
 

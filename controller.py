@@ -44,6 +44,23 @@ def getActiveDisplayMode():
     global activeDisplayMode
     return activeDisplayMode
 
+def getActiveWord():
+    global activeWord
+    return activeWord
+
+def getUnits():
+    global units
+    return units
+
+def getActiveUnit():
+    global activeUnit
+    return activeUnit
+
+def getRandomWord():
+    global activeUnit
+    return random.choice(activeUnit)
+
+
 def setDisplayMode(mode):
     global activeDisplayMode
     activeDisplayMode = mode
@@ -52,13 +69,11 @@ def setActiveWord(word):
     global activeWord
     activeWord = word
 
-def getActiveWord():
-    global activeWord
-    return activeWord
 
-def getRandomWord():
-    global activeUnit
-    return random.choice(activeUnit)
+def resetActiveWordStats():
+    global activeWord
+    activeWord.accessed = 0
+    activeWord.correct = 0
 
 def printActiveWord():
     print(activeWord)
@@ -73,8 +88,12 @@ def printUnits():
 def makeUnitActive(name=None):
     global units, activeUnit, activeWord
     if (name == None):
-        activeUnit = list(units.values())[0]
-        activeWord = activeUnit[0]
+        if (len(units)):
+            activeUnit = list(units.values())[0]
+            activeWord = activeUnit[0]
+        else:
+            activeWord = False
+            activeUnit = False
     else:
         activeUnit = units[name]
         activeWord = activeUnit[0]
@@ -115,10 +134,9 @@ def markCorrect(word):
             
 ## Persistence functions
 def serialize():
-    global units, activeDisplayMode, hardMode, displayMode, firstUse
+    global units, activeDisplayMode
     state = {'units' : units,
-             'activeDisplayMode' : activeDisplayMode,
-             'displayMode' : displayMode}
+             'activeDisplayMode' : activeDisplayMode}
     pickle.dump(state, open("state.cm", "wb"))
     
 def deserialize():

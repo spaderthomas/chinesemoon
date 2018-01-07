@@ -143,6 +143,16 @@ proc vTclWindow.top37 {base} {
         -highlightbackground {#d9d9d9} -highlightcolor black -justify left \
         -text {Hard Mode} -variable hardMode 
     vTcl:DefineAlias "$top.che40" "toggleHardButton" vTcl:WidgetProc "mainscreen" 1
+    button $top.but37 \
+        -activebackground {#d9d9d9} -activeforeground {#000000} \
+        -background {#d9d9d9} -disabledforeground {#a3a3a3} \
+        -foreground {#000000} -highlightbackground {#d9d9d9} \
+        -highlightcolor black -pady 0 -text {Reset Word} 
+    vTcl:DefineAlias "$top.but37" "resetButton" vTcl:WidgetProc "mainscreen" 1
+    label $top.lab37 \
+        -background {#d9d9d9} -disabledforeground {#a3a3a3} \
+        -foreground {#000000} 
+    vTcl:DefineAlias "$top.lab37" "ratioLabel" vTcl:WidgetProc "mainscreen" 1
     ###################
     # SETTING GEOMETRY
     ###################
@@ -156,8 +166,8 @@ proc vTclWindow.top37 {base} {
         -in $top -x 10 -y 390 -width 296 -relwidth 0 -height 43 -relheight 0 \
         -anchor nw -bordermode ignore 
     place $top.lab41 \
-        -in $top -x 410 -y 150 -width 352 -relwidth 0 -height 116 \
-        -relheight 0 -anchor nw -bordermode ignore 
+        -in $top -x 330 -y 60 -width 432 -relwidth 0 -height 286 -relheight 0 \
+        -anchor nw -bordermode ignore 
     place $top.cpd38 \
         -in $top -x 530 -y 390 -width 155 -height 43 -anchor nw \
         -bordermode inside 
@@ -169,6 +179,12 @@ proc vTclWindow.top37 {base} {
         -bordermode inside 
     place $top.che40 \
         -in $top -x 790 -y 10 -anchor nw -bordermode ignore 
+    place $top.but37 \
+        -in $top -x 790 -y 50 -width 106 -relwidth 0 -height 33 -relheight 0 \
+        -anchor nw -bordermode ignore 
+    place $top.lab37 \
+        -in $top -x 800 -y 100 -width 82 -relwidth 0 -height 26 -relheight 0 \
+        -anchor nw -bordermode ignore 
 
     vTcl:FireEvent $base <<Ready>>
 }
