@@ -4,6 +4,8 @@
 # To-do
 # - make all positions relative
 # - Clear unit when deleting last one
+# - space bar is broken?
+# - move display mode into this file, add a current display mode for switching without changing the mode youre in
 # Imports
 from tkinter import *
 from tkinter import filedialog
@@ -50,6 +52,8 @@ def destroy_GUI():
 
 hardMode = False
 percentMode = False
+activeDisplayMode = 'character' # Marks which part of the active word should be displayed
+globalDisplayMode = 'character' # Which variant shows up first in general
 class GUI:
     # Flash card functions
     def showPinyin(self, word, event=None):
@@ -91,13 +95,16 @@ class GUI:
         return
 
     def cycleDisplay(self, event=None):
-        mode = getActiveDisplayMode()
+        global activeDisplayMode
         word = getActiveWord()
-        if (mode == 'character'):
+        if (activeDisplayMode == 'character'):
+            activeDisplayMode = 'pinyin'
             self.showPinyin(word)
-        elif (mode == 'pinyin'):
+        elif (activeDisplayMode == 'pinyin'):
+            activeDisplayMode = 'definition'
             self.showDef(word)
-        elif (mode == 'definition'):
+        elif (activeDisplayMode == 'definition'):
+            activeDisplayMode = 'character'
             self.showChar(word)
         return 'break' 
 
@@ -116,12 +123,12 @@ class GUI:
         self.ratioLabel.configure(text=ratioStr)
             
     def nextWord(self, event=None):
+        global globalDisplayMode
         countWordsTooEasy = 0
         newWord = False
         wordColorHexStr = False
         while True:
             newWord = getRandomWord()
-            
             # Change word color based on how correct it is
             if (newWord.accessed == 0):
                 rateCorrect = 0
@@ -146,17 +153,16 @@ class GUI:
             if (countWordsTooEasy > 1000): #the worst algorithm
                 messagebox.showinfo("Get it girl!", "It looks like this unit is too easy for you -- we couldn't find a word with less than 2/3 correct rate!")
                 root.mainloop()
-                
+
         setActiveWord(newWord)
-        mode = getActiveDisplayMode()
-        self.show(newWord, wordColorHexStr, mode)
+        self.show(newWord, wordColorHexStr, globalDisplayMode)
         self.updateRatio(newWord)
 
 
                 
     ## Unit Menu
     def selectUnitOnRightClick(self, event):
-        x = root.winfo_pointerx() - self.unitList.winfo_rootx()
+        x = root.winfo_pointerx() - self.unitList.winfo_rootx() # Widget relative
         y = root.winfo_pointery() - self.unitList.winfo_rooty()
         posStr = "@"
         posStr = posStr + str(x) + "," + str(y)
@@ -179,37 +185,40 @@ class GUI:
         unitName = simpledialog.askstring("New Unit!", "What's the name of the new unit?")
         root.withdraw()
         path = filedialog.askopenfilename()
-        root.deiconify()
+        root.deiconify() 
 
-        # Create unit and add it to dictionary
-        newUnit = unitFromXLSX(path)
-        addUnit(unitName, newUnit)
-        
-        # Add unit's name to our list and show it
-        self.unitList.insert(END, unitName)
-        makeUnitActive(unitName)
-        self.nextWord()
+        # TKinter returns '' on cancel
+        if path is not '':
+            # Create unit and add it to dictionary
+            newUnit = unitFromXLSX(path)
+            addUnit(unitName, newUnit)
+          
+            # Add unit's name to our list
+            self.unitList.insert(END, unitName)
 
-    # Note: Unit to be deleted should be bound as active    
-    def deleteActiveUnit(self):
+    def deleteSelectedUnit(self):
         name = self.unitList.get(ACTIVE)
         delUnit(name)
         
         self.unitList.delete(ACTIVE)
         makeUnitActive()
 
-        activeUnit = getActiveUnit()
-        if (activeUnit):
+        activeUnits = getActiveUnits()
+        if (activeUnits):
             self.nextWord()
         else:
             self.vocabWordLabel.configure(font=self.englishFont)
             self.vocabWordLabel.configure(text="Add a unit!")
 
-        
+    def addSelectedUnitToSet(self):
+        name = self.unitList.get(ACTIVE)
+        addUnitToActive(name)
 
     ## Mode changing
     def activateDefMode(self, event=None):
-        setDisplayMode('definition')
+        global activeDisplayMode, globalDisplayMode
+        globalDisplayMode = 'definition'
+        activeDisplayMode = 'definition'
         self.pinyinModeButton.configure(relief=RAISED)
         self.charModeButton.configure(relief=RAISED)
         self.defModeButton.configure(relief=SUNKEN)
@@ -217,7 +226,9 @@ class GUI:
         self.showDef(word)
 
     def activatePinyinMode(self, event=None):
-        setDisplayMode('pinyin')
+        global activeDisplayMode, globalDisplayMode
+        globalDisplayMode = 'pinyin'
+        activeDisplayMode = 'pinyin'
         self.defModeButton.configure(relief=RAISED)
         self.charModeButton.configure(relief=RAISED)
         self.pinyinModeButton.configure(relief=SUNKEN)
@@ -225,7 +236,9 @@ class GUI:
         self.showPinyin(word)
 
     def activateCharMode(self, event=None):
-        setDisplayMode('character')
+        global activeDisplayMode, globalDisplayMode
+        globalDisplayMode = 'character'
+        activeDisplayMode = 'character'
         self.pinyinModeButton.configure(relief=RAISED)
         self.defModeButton.configure(relief=RAISED)
         self.charModeButton.configure(relief=SUNKEN)
@@ -246,17 +259,27 @@ class GUI:
         self.nextWord()
 
     def onClickResetButton(self):
+        global activeDisplayMode
         resetActiveWordStats()
         activeWord = getActiveWord()
-        mode = getActiveDisplayMode()
-        self.show(activeWord, '#000000', mode)
+        self.updateRatio(activeWord)
+        self.show(activeWord, '#000000', activeDisplayMode)
         
     def onClickRatioLabel(self, event):
         global percentMode
-        percentMode = True
+        percentMode = not percentMode
         activeWord = getActiveWord()
         self.updateRatio(activeWord)
 
+    def viewUnitsInSet(self):
+        activeUnits = getActiveUnits()
+        str = "The units in your current practice set are:\n"
+        for name in activeUnits.keys():
+          str += name + "\n"
+        str = str[:-1]
+        unitName = messagebox.showinfo("Whoa!", str)
+        
+        
     def serialize(self):
         global hardMode, percentMode
         state = {'hardMode' : hardMode.get(),
@@ -268,7 +291,7 @@ class GUI:
 
     def onClose(self):
         self.serialize()
-        serialize()
+        serializeController()
         root.destroy()
 
         
@@ -297,7 +320,7 @@ class GUI:
         _ana2color = '#d9d9d9' # X11 color: 'gray85' 
 
         top.geometry("901x450+511+97")
-        top.title("Chinese")
+        top.title("月亮")
         top.configure(background="#d9d9d9")
         top.configure(highlightbackground="#d9d9d9")
         top.configure(highlightcolor="black")
@@ -317,9 +340,9 @@ class GUI:
 
         self.unitMenu = Menu(self.unitList, tearoff=0)
         self.unitMenu.add_command(label="Delete",
-                                    command=self.deleteActiveUnit)
-        self.unitMenu.add_command(label="Select All",
-                                    command=self.deleteActiveUnit)
+                                    command=self.deleteSelectedUnit)
+        self.unitMenu.add_command(label="Add to current practice set",
+                                    command=self.addSelectedUnitToSet)
 
         self.unitSelect = Label(top)
         self.unitSelect.place(relx=0.11, rely=0.02, height=26, width=102)
@@ -442,6 +465,13 @@ class GUI:
         self.ratioLabel.configure(foreground="#000000")
         self.ratioLabel.configure(font=self.smallEnglishFont)
 
+        top.option_add('*tearOff', False) # No popups of text in menu items
+        self.menuBar = Menu(top)
+        top.config(menu=self.menuBar)
+        view = Menu(self.menuBar)
+        self.menuBar.add_cascade(label="View", menu=view)
+        view.add_command(label="View units in current set", command=self.viewUnitsInSet)
+        
         # Init all programmatic things
         top.bind('n', self.nextWord)
         top.bind('p', self.onPressP)
@@ -467,21 +497,29 @@ class GUI:
 
         # Load in data. If we can't find it, display welcome message
         try:
-            state = deserialize()
-            setUnits(state['units'])
-            for name in state['units']:
-                self.unitList.insert(END, name)
-                
+            # Controller
+            controllerState = deserializeController()
+            loadUnits(controllerState['units'])
+            
             makeUnitActive()
-            self.nextWord()
-
+            activeWord = getActiveWord()
+            if activeWord is not False:
+              self.updateRatio(activeWord)
+            
+            # GUI
             guiState = self.deserialize()
             hardMode.set(guiState['hardMode'])
             percentMode = guiState['percentMode']
 
-            activeWord = getActiveWord()
-            self.updateRatio(activeWord)
-        except:
+            for name in controllerState['units']:
+                self.unitList.insert(END, name)
+                
+            # Load up a fresh word from the first unit!
+            self.nextWord()
+        except Exception as e:
+            exc_type, exc_obj, exc_tb = sys.exc_info()
+            fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
+            print(exc_type, fname, exc_tb.tb_lineno)
             messagebox.showinfo("!", "Welcome to chinesemoon! A handmade flash card program, just for you!. How to use:\n 1. Load a unit from an excel spreadsheet. Make sure you just have the characters in column 1, pinyin in column 2, and definition in column 3.\n2. Add the spreadsheet as a unit.\n\nGreat! Now you have a unit of vocabulary to study! Press <space> to toggle between character, definition, and pinyin. Press 'p', 'd', or 'c' to flip directly to pinyin, definition, or character. When studying, press enter to mark a word as correct and press right shift to mark it incorrect. If you want to study without affecting your score, use 'n' to go to the next word.\n\n Words will show up on a spectrum of green to red, indicating what percentage of the time you get them correct. Check hard mode to only display words you get wrong more than 1/3 of the time!")
 
 if __name__ == '__main__':

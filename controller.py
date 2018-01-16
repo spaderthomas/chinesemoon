@@ -4,13 +4,13 @@ import random
 import sys
 import copy
 import pickle
+import os
 
 ## Globals
 units = {} # Maps strings to lists of VocabWords
 
 activeWord = False
-activeUnit = False
-activeDisplayMode = 'character' # Marks which part of the active word should be displayed
+activeUnits = False
 
 hardModeCutoff = .66
 
@@ -39,11 +39,7 @@ class VocabWord(Struct):
                + 'definition = ' + self.definition + ","
                + 'ratio = ' + str(ratio))
 
-
-def getActiveDisplayMode():
-    global activeDisplayMode
-    return activeDisplayMode
-
+# Getters and setters
 def getActiveWord():
     global activeWord
     return activeWord
@@ -52,14 +48,16 @@ def getUnits():
     global units
     return units
 
-def getActiveUnit():
-    global activeUnit
-    return activeUnit
+def getActiveUnits():
+    global activeUnits
+    return activeUnits
 
+# Note: This is actually a bad random function, because it favors words in smaller units
+# But it's good enough for our purposes
 def getRandomWord():
-    global activeUnit
-    return random.choice(activeUnit)
-
+    global activeUnits
+    randKey = random.choice(list(activeUnits.keys()))
+    return random.choice(activeUnits[randKey])
 
 def setDisplayMode(mode):
     global activeDisplayMode
@@ -69,35 +67,39 @@ def setActiveWord(word):
     global activeWord
     activeWord = word
 
-
 def resetActiveWordStats():
     global activeWord
     activeWord.accessed = 0
     activeWord.correct = 0
 
-def printActiveWord():
-    print(activeWord)
-
-def printActiveUnit():
-    print(activeUnit)
-
-def printUnits():
-    print(units)
     
 ## Unit handling
+# Clears out active units and sets unit denoted by name to be active
 def makeUnitActive(name=None):
-    global units, activeUnit, activeWord
-    if (name == None):
-        if (len(units)):
-            activeUnit = list(units.values())[0]
-            activeWord = activeUnit[0]
-        else:
-            activeWord = False
-            activeUnit = False
-    else:
-        activeUnit = units[name]
-        activeWord = activeUnit[0]
+    global units, activeUnits, activeWord
 
+    # Case where we just want to set first unit to active (init from file, delete active unit)
+    if (name == None): 
+        if (len(units)):
+            name = list(units.keys())[0]
+            activeUnits = {name : list(units.values())[0]}
+            activeWord = activeUnits[name][0]
+        else:
+            activeUnits = False
+            activeWord = False
+    else:
+        activeUnits = {name : units[name]}
+        activeWord = activeUnits[name][0]
+
+def addUnitToActive(name):
+    global units, activeUnits
+    activeUnits[name] = units[name]
+
+def delUnitFromActive(name):
+    global activeUnits
+    if name in activeUnits:
+      del activeUnits[name]
+    
 def addUnit(unitName, newUnit):
     global units, activeUnit
     units[unitName] = newUnit;
@@ -130,18 +132,18 @@ def markCorrect(word):
     word.accessed += 1
     word.correct += 1
 
-
             
 ## Persistence functions
-def serialize():
+def serializeController():
     global units, activeDisplayMode
-    state = {'units' : units,
-             'activeDisplayMode' : activeDisplayMode}
+    state = {'units' : units}
     pickle.dump(state, open("state.cm", "wb"))
     
-def deserialize():
-    return pickle.load(open("state.cm", "rb"))
+def deserializeController():
+    curDir = os.path.dirname(__file__)
+    path = os.path.join(curDir, 'state.cm')
+    return pickle.load(open(path, "rb"))
 
-def setUnits(serializedUnits):
+def loadUnits(serializedUnits):
     global units
     units = copy.deepcopy(serializedUnits)
